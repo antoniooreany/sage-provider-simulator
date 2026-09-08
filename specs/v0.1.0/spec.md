@@ -128,14 +128,48 @@ that contract.
 
 ### AC-SIM-006: Pagination — P1 (US-SIM-006, FR-203)
 
-- [ ] `page` and `per_page` query parameters control response pagination.
-- [ ] Default page size is documented.
-- [ ] Response includes pagination metadata.
+> **Status:** Implemented and locally validated on `feature/p1a-pagination-and-429`
+> at `c62b6e9e4ea3ee26478307bbd78089214ba8786f`. Aligns with canonical contract
+> merged in `integration-workspace` at `1b481345748f7b66084ade31231d0bf146013c4a`.
+> **Not yet PR-reviewed, merged, or live-E2E-verified.**
+
+> The criteria below remain unchecked until simulator PR review, end-to-end
+> Compose verification, and explicit merge approval are complete.
+
+- [ ] `page` defaults to `1`; valid values are canonical positive integers >= 1.
+- [ ] `per_page` defaults to `10`; valid values are canonical integers from `1` through `100`.
+- [ ] Successful 200 responses retain top-level `invoices` list (ensuring P0 API compatibility).
+- [ ] Response includes `pagination` object with integer fields `page`, `per_page`, `total_items`, and `total_pages`.
+- [ ] A request beyond the final page returns 200 with `invoices: []` and accurate pagination metadata.
+- [ ] Invalid `page` returns 400 with exact JSON:
+      `{"error":"Bad Request","message":"Invalid 'page' parameter: must be an integer >= 1."}`.
+- [ ] Invalid `per_page` returns 400 with exact JSON:
+      `{"error":"Bad Request","message":"Invalid 'per_page' parameter: must be an integer between 1 and 100."}`.
+- [ ] Duplicate `page` query parameter returns 400 with exact JSON:
+      `{"error":"Bad Request","message":"Duplicate 'page' query parameter."}`.
+- [ ] Duplicate `per_page` query parameter returns 400 with exact JSON:
+      `{"error":"Bad Request","message":"Duplicate 'per_page' query parameter."}`.
+- [ ] Missing or invalid `X-API-Key` returns 401 before any pagination validation or duplicate checking.
+- [ ] Multi-page traversal on the consuming API is explicitly not part of this simulator task.
 
 ### AC-SIM-007: Simulated 429 — P1 (US-SIM-005, FR-204)
 
-- [ ] Simulator returns 429 under predictable, documented conditions.
-- [ ] Response includes `Retry-After` header.
+> **Status:** Implemented and locally validated on `feature/p1a-pagination-and-429`
+> at `c62b6e9e4ea3ee26478307bbd78089214ba8786f`. Aligns with canonical contract
+> merged in `integration-workspace` at `1b481345748f7b66084ade31231d0bf146013c4a`.
+> **Not yet PR-reviewed, merged, or live-E2E-verified.**
+
+> The criteria below remain unchecked until simulator PR review, end-to-end
+> Compose verification, and explicit merge approval are complete.
+
+- [ ] Missing or invalid `X-API-Key` returns 401 before any error simulation is evaluated.
+- [ ] Following successful authentication, `simulate_error=429` and `simulate_error=500`
+      take precedence over duplicate parameter checks and pagination validation.
+- [ ] `simulate_error=429` returns HTTP 429 with `Content-Type: application/json` and
+      header `Retry-After: 5`.
+- [ ] Exact 429 JSON response body:
+      `{"error":"Too Many Requests","message":"Simulated rate limit exceeded. Please retry after 5 seconds."}`.
+- [ ] P0 API compatibility is preserved because provider responses retain top-level `invoices`.
 
 ### AC-SIM-008: Browser UI — P1 (US-SIM-007, FR-206)
 
@@ -146,7 +180,8 @@ that contract.
 
 ## 6. Assumptions
 
-- A-SIM-001: The API contract is defined in `integration-workspace/contracts/`.
+- A-SIM-001: The canonical system contract is defined in
+  `integration-workspace/docs/contracts/invoice-sync-v0.1.md`.
 - A-SIM-002: The X-API-Key is a non-secret test value provided via environment.
 - A-SIM-003: Fixture data is static JSON; no database is used.
 - A-SIM-004: The simulator runs as a Docker container in the Compose network.

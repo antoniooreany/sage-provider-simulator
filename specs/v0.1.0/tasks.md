@@ -178,24 +178,43 @@
 
 ### T-SIM-008: Pagination Support
 
-- **Status:** ⬜
+- **Status:** 🔄
 - **Priority:** P1
-- **Branch:** `feature/pagination`
-- **Dependencies:** T-SIM-003.
+- **Branch:** `feature/p1a-pagination-and-429`
+- **Implementation Commit:** `c62b6e9e4ea3ee26478307bbd78089214ba8786f`
+- **Dependencies:** T-SIM-003; workspace contract baseline merged into
+  `integration-workspace/develop` at `1b481345748f7b66084ade31231d0bf146013c4a`.
 - **Description:** Implement `page` and `per_page` query parameter handling
-  with pagination metadata in response.
+  with defaults, integer validation, duplicate parameter rejection, and pagination
+  metadata in response.
+- **Implementation Status:** Implemented and locally validated on this branch
+  (`pytest -v`: 32 passed; `ruff check .`: passed).
+  **Not yet PR-reviewed, merged, or live-E2E-verified.**
+- **Remaining Merge Gates:**
+  - Simulator PR review;
+  - End-to-end Compose verification;
+  - Explicit merge approval.
 - **Traces to:** FR-203, AC-SIM-006
 
 ---
 
 ### T-SIM-009: Simulated 429 with Retry-After
 
-- **Status:** ⬜
+- **Status:** 🔄
 - **Priority:** P1
-- **Branch:** `feature/error-429`
-- **Dependencies:** T-SIM-004.
-- **Description:** Implement `?simulate_error=429` trigger with `Retry-After`
-  header.
+- **Branch:** `feature/p1a-pagination-and-429`
+- **Implementation Commit:** `c62b6e9e4ea3ee26478307bbd78089214ba8786f`
+- **Dependencies:** T-SIM-004; workspace contract baseline merged into
+  `integration-workspace/develop` at `1b481345748f7b66084ade31231d0bf146013c4a`.
+- **Description:** Implement deterministic `?simulate_error=429` trigger with
+  `Retry-After: 5` header and precedence over pagination validation.
+- **Implementation Status:** Implemented and locally validated on this branch
+  (`pytest -v`: 32 passed; `ruff check .`: passed).
+  **Not yet PR-reviewed, merged, or live-E2E-verified.**
+- **Remaining Merge Gates:**
+  - Simulator PR review;
+  - End-to-end Compose verification;
+  - Explicit merge approval.
 - **Traces to:** FR-204, AC-SIM-007
 
 ---
@@ -235,4 +254,5 @@ graph TD
 | Priority | Tasks | Status |
 |---|---|---|
 | **P0** | T-SIM-001, T-SIM-002, T-SIM-003, T-SIM-004, T-SIM-005, T-SIM-006, T-SIM-007 | ⬜ Not started |
-| **P1** | T-SIM-008, T-SIM-009, T-SIM-010 | ⬜ Not started |
+| **P1** | T-SIM-008, T-SIM-009 | 🔄 In progress (locally validated) |
+| **P1** | T-SIM-010 | ⬜ Not started |
