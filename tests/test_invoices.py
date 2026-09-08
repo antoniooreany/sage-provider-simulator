@@ -68,3 +68,126 @@ def test_invoices_have_distinct_ids(client):
     data = response.get_json()
     ids = [inv["id"] for inv in data["invoices"]]
     assert len(ids) == len(set(ids)), "Invoice IDs are not unique"
+
+
+def test_invoices_default_pagination(client):
+    """Default request includes pagination metadata (page=1, per_page=10)."""
+    response = _get_invoices(client)
+    assert response.status_code == 200
+    data = response.get_json()
+    assert "pagination" in data
+    pagination = data["pagination"]
+    assert pagination["page"] == 1
+    assert pagination["per_page"] == 10
+    assert pagination["total_items"] == 3
+    assert pagination["total_pages"] == 1
+    assert len(data["invoices"]) == 3
+
+
+def test_invoices_pagination_slicing(client):
+    """Explicit page and per_page slices fixture invoices correctly."""
+    # Page 1 with per_page=2: should return 2 invoices (INV-001, INV-002)
+    response_p1 = client.get(
+        "/api/v1/invoices?page=1&per_page=2",
+        headers={"X-API-Key": TEST_API_KEY},
+    )
+    assert response_p1.status_code == 200
+    data_p1 = response_p1.get_json()
+    assert len(data_p1["invoices"]) == 2
+    assert data_p1["invoices"][0]["id"] == "INV-001"
+    assert data_p1["invoices"][1]["id"] == "INV-002"
+    assert data_p1["pagination"] == {
+        "page": 1,
+        "per_page": 2,
+        "total_items": 3,
+        "total_pages": 2,
+    }
+
+    # Page 2 with per_page=2: should return 1 invoice (INV-003)
+    response_p2 = client.get(
+        "/api/v1/invoices?page=2&per_page=2",
+        headers={"X-API-Key": TEST_API_KEY},
+    )
+    assert response_p2.status_code == 200
+    data_p2 = response_p2.get_json()
+    assert len(data_p2["invoices"]) == 1
+    assert data_p2["invoices"][0]["id"] == "INV-003"
+    assert data_p2["pagination"] == {
+        "page": 2,
+        "per_page": 2,
+        "total_items": 3,
+        "total_pages": 2,
+    }
+
+
+def test_invoices_pagination_empty_page_beyond_final(client):
+    """Requesting a page beyond the final page returns 200 with empty list."""
+    response = client.get(
+        "/api/v1/invoices?page=5&per_page=2",
+        headers={"X-API-Key": TEST_API_KEY},
+    )
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data["invoices"] == []
+    assert data["pagination"] == {
+        "page": 5,
+        "per_page": 2,
+        "total_items": 3,
+        "total_pages": 2,
+    }
+
+
+def test_invoices_pagination_invalid_page_returns_400(client):
+    """Invalid page parameter (< 1 or non-integer) returns 400 Bad Request."""
+    for bad_page in ["0", "-1", "abc", "1.5"]:
+        response = client.get(
+            f"/api/v1/invoices?page={bad_page}",
+            headers={"X-API-Key": TEST_API_KEY},
+        )
+        assert response.status_code == 400, f"Expected 400 for page={bad_page}"
+        data = response.get_json()
+        assert data.get("error") == "Bad Request"
+        assert "message" in data
+
+
+def test_invoices_pagination_invalid_per_page_returns_400(client):
+    """Invalid per_page parameter (< 1, > 100, or non-integer) returns 400."""
+    for bad_per_page in ["0", "-5", "101", "xyz", "2.0"]:
+        response = client.get(
+            f"/api/v1/invoices?per_page={bad_per_page}",
+            headers={"X-API-Key": TEST_API_KEY},
+        )
+        assert response.status_code == 400, f"Expected 400 for per_page={bad_per_page}"
+        data = response.get_json()
+        assert data.get("error") == "Bad Request"
+        assert "message" in data
+
+
+def test_invoices_pagination_duplicate_page_returns_400(client):
+    """Duplicate page query parameters return 400 Bad Request."""
+    response = client.get(
+        "/api/v1/invoices?page=1&page=2",
+        headers={"X-API-Key": TEST_API_KEY},
+    )
+    assert response.status_code == 400
+    data = response.get_json()
+    assert data.get("error") == "Bad Request"
+    assert "message" in data
+
+
+def test_invoices_pagination_duplicate_per_page_returns_400(client):
+    """Duplicate per_page query parameters return 400 Bad Request."""
+    response = client.get(
+        "/api/v1/invoices?per_page=5&per_page=10",
+        headers={"X-API-Key": TEST_API_KEY},
+    )
+    assert response.status_code == 400
+    data = response.get_json()
+    assert data.get("error") == "Bad Request"
+    assert "message" in data
+
+
+def test_invoices_pagination_requires_auth_before_validation(client):
+    """Unauthenticated requests with invalid pagination return 401, not 400."""
+    response = client.get("/api/v1/invoices?page=-1&per_page=invalid")
+    assert response.status_code == 401

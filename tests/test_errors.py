@@ -44,3 +44,50 @@ def test_normal_request_still_returns_200(client):
     assert response.status_code == 200
     data = response.get_json()
     assert "invoices" in data
+
+
+def test_simulate_error_429_returns_429(client):
+    """GET /api/v1/invoices?simulate_error=429 with valid key returns 429."""
+    response = client.get(
+        "/api/v1/invoices?simulate_error=429",
+        headers={"X-API-Key": TEST_API_KEY},
+    )
+    assert response.status_code == 429
+
+
+def test_simulate_error_429_headers_and_body(client):
+    """429 response contains JSON body, Retry-After header, and content-type."""
+    response = client.get(
+        "/api/v1/invoices?simulate_error=429",
+        headers={"X-API-Key": TEST_API_KEY},
+    )
+    assert response.content_type == "application/json"
+    assert response.headers.get("Retry-After") == "5"
+    data = response.get_json()
+    assert data is not None
+    assert data.get("error") == "Too Many Requests"
+    assert data.get("message") == "Simulated rate limit exceeded. Please retry after 5 seconds."
+
+
+def test_simulate_error_429_requires_auth(client):
+    """simulate_error=429 requires valid X-API-Key (returns 401 without)."""
+    response = client.get("/api/v1/invoices?simulate_error=429")
+    assert response.status_code == 401
+
+
+def test_simulate_error_429_precedence_over_invalid_pagination(client):
+    """simulate_error=429 takes precedence over invalid pagination parameters."""
+    response = client.get(
+        "/api/v1/invoices?simulate_error=429&page=invalid&per_page=-5",
+        headers={"X-API-Key": TEST_API_KEY},
+    )
+    assert response.status_code == 429
+
+
+def test_simulate_error_500_precedence_over_invalid_pagination(client):
+    """simulate_error=500 takes precedence over invalid pagination parameters."""
+    response = client.get(
+        "/api/v1/invoices?simulate_error=500&page=-1&per_page=invalid",
+        headers={"X-API-Key": TEST_API_KEY},
+    )
+    assert response.status_code == 500

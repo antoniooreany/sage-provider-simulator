@@ -36,15 +36,30 @@ The simulator is built with Python 3.12 and Flask. It uses a straightforward App
 ### Invoices
 - **`GET /api/v1/invoices`**
   - **Auth:** Requires valid `X-API-Key` header.
-  - **Response:** `200 OK` with JSON array of invoices sourced from `fixtures/invoices.json`.
+  - **Query Parameters:**
+    - `page` (optional integer, default: `1`, minimum: `1`): Page number (1-based).
+    - `per_page` (optional integer, default: `10`, range: `1..100`): Invoices per page.
+  - **Response:** `200 OK` with JSON object containing `invoices` array and `pagination` metadata (`page`, `per_page`, `total_items`, `total_pages`).
+  - **Error Responses:** `400 Bad Request` on invalid parameter types, values out of range, or duplicate parameter keys.
 
 ## Error Simulation
 
-You can simulate a server error by appending a query parameter `simulate_error=500` to the endpoint:
+The simulator provides deterministic provider error scenarios triggered by query parameters:
+
+### 500 Internal Server Error
+Append `simulate_error=500` to the endpoint:
 ```bash
 curl -H "X-API-Key: test-api-key-not-a-secret" "http://localhost:5000/api/v1/invoices?simulate_error=500"
 ```
-This will return a `500 Internal Server Error` response.
+Returns `500 Internal Server Error` with JSON error payload.
+
+### 429 Too Many Requests
+Append `simulate_error=429` to the endpoint:
+```bash
+curl -i -H "X-API-Key: test-api-key-not-a-secret" "http://localhost:5000/api/v1/invoices?simulate_error=429"
+```
+Returns `429 Too Many Requests` with a `Retry-After: 5` header and JSON error payload.
+
 
 ## Environment Variables
 
