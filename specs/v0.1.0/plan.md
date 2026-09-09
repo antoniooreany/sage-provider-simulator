@@ -81,18 +81,15 @@ sage-provider-simulator/
 |---|---|---|
 | Missing/invalid X-API-Key | 401 | `{"error": "Unauthorized", "message": "..."}` |
 | `?simulate_error=500` | 500 | `{"error": "Internal Server Error", "message": "..."}` |
-| `?simulate_error=429` (P1) | 429 | `{"error": "Too Many Requests", "message": "..."}` + `Retry-After` header |
+| `?simulate_error=429` (P1a) | 429 | `{"error":"Too Many Requests","message":"Simulated rate limit exceeded. Please retry after 5 seconds."}` + `Retry-After: 5` header |
 
 ### 3.4 Invoice Response Schema
 
-The exact response schema will be implemented only after
-`integration-workspace/contracts/provider-api-v1.yaml` is approved.
-Until then, the service specification defines only the endpoint purpose,
-X-API-Key authentication, deterministic fixture-based response behavior,
-and JSON error behavior.
-
-Both the Flask provider and the FastAPI consumer will follow the future
-versioned workspace contract.
+The invoice response schema and P1a simulator extensions are governed by the
+canonical contract in `integration-workspace/docs/contracts/invoice-sync-v0.1.md`,
+merged into `develop` at commit `1b481345748f7b66084ade31231d0bf146013c4a`.
+Both the Flask provider and the FastAPI consumer follow this versioned
+workspace contract baseline.
 
 ---
 
@@ -111,8 +108,8 @@ versioned workspace contract.
 |---|---|---|
 | `test_health.py` | `GET /health` returns 200, correct JSON | P0 |
 | `test_auth.py` | 401 without key, 401 with bad key, 200 with valid key | P0 |
-| `test_invoices.py` | Response schema, fixture data completeness, content-type | P0 |
-| `test_errors.py` | `?simulate_error=500` returns 500 JSON | P0 |
+| `test_invoices.py` | invoice response/schema and fixtures; pagination defaults, slicing, metadata, beyond-final-page behavior; invalid and duplicate pagination parameters; authentication-before-validation precedence | P0 |
+| `test_errors.py` | deterministic `simulate_error=500` and `simulate_error=429`; exact 429 JSON response and `Retry-After: 5`; authentication requirements; simulation-before-pagination-validation precedence | P0 |
 
 All tests use the Flask test client. No external services required.
 Tests are written before implementation (red → green → refactor).
@@ -191,8 +188,27 @@ After all gates pass, the recommended implementation order is:
 8. **CI workflow:** Ruff + pytest + Docker build.
 9. **README:** Setup, usage, and contract reference.
 
-> Pagination (FR-203), 429 simulation (FR-204), and browser UI (FR-206) are
-> deferred to P1. They are not part of the P0 implementation order.
+> Browser UI (FR-206) remains deferred to P1.
+> Pagination (FR-203) and 429 error simulation (FR-204) were implemented as a
+> combined P1a extension on `feature/p1a-pagination-and-429`.
+
+### 9.1 P1a Simulator Extension Implementation Status
+
+- **Branch:** `feature/p1a-pagination-and-429` (single combined feature branch)
+- **Implementation Commit:** `c62b6e9e4ea3ee26478307bbd78089214ba8786f`
+- **Contract Baseline:** Merged into `integration-workspace/develop` at commit
+  `1b481345748f7b66084ade31231d0bf146013c4a` (`docs/contracts/invoice-sync-v0.1.md`).
+- **Sequencing Note:** The workspace contract amendment was merged after the
+  simulator implementation existed, and now governs its merge criteria.
+- **Local Test Evidence:**
+  - `pytest -v`: 32 passed in 1.01s.
+  - `ruff check .`: passed.
+- **Pending Merge Gates:**
+  - No simulator PR has been created or reviewed yet.
+  - No simulator merge has occurred.
+  - No live cross-service E2E verification has happened.
+  - End-to-end Compose verification remains required before simulator merge and
+    is not performed by this documentation-only task.
 
 ---
 
